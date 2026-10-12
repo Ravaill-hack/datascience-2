@@ -16,7 +16,6 @@ db = create_engine(
 
 plt.style.use("seaborn-v0_8-darkgrid")
 
-# Variables RFM par client : Recency, Frequency, Monetary
 query = """
 SELECT user_id,
        COUNT(*)        AS frequency,
@@ -33,11 +32,8 @@ df["last_purchase"] = pd.to_datetime(df["last_purchase"]).dt.tz_localize(None)
 today = df["last_purchase"].max()
 df["recency"] = (today - df["last_purchase"]).dt.days
 
-# Les variables sont mises à l'échelle pour que KMeans ne soit pas
-# dominé par celle qui a les plus grandes valeurs
 X = StandardScaler().fit_transform(df[["recency", "frequency", "monetary"]])
 
-# Méthode du coude : inertie pour k = 1..10
 inertias = []
 ks = range(1, 11)
 for k in ks:

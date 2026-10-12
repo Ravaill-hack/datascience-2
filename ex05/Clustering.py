@@ -17,7 +17,6 @@ db = create_engine(
 
 plt.style.use("seaborn-v0_8-darkgrid")
 
-# ---------- 1. Données par client ----------
 query = """
 SELECT user_id,
        COUNT(*)        AS frequency,
@@ -35,10 +34,9 @@ for col in ("first_purchase", "last_purchase"):
     df[col] = pd.to_datetime(df[col]).dt.tz_localize(None)
 
 today = df["last_purchase"].max()
-df["recency"] = (today - df["last_purchase"]).dt.days   # jours depuis le dernier achat
-df["tenure"] = (today - df["first_purchase"]).dt.days   # ancienneté du client
+df["recency"] = (today - df["last_purchase"]).dt.days 
+df["tenure"] = (today - df["first_purchase"]).dt.days
 
-# ---------- 2. Clustering (KMeans) ----------
 features = ["recency", "frequency", "monetary", "tenure"]
 X = StandardScaler().fit_transform(df[features])
 
@@ -46,21 +44,19 @@ K = 5
 km = KMeans(n_clusters=K, n_init=10, random_state=42)
 df["cluster"] = km.fit_predict(X)
 
-# ---------- 3. Donner un nom à chaque cluster ----------
 med = df.groupby("cluster")[features].median()
 
 names = {}
 remaining = list(med.index)
 
-inactive = med.loc[remaining, "recency"].idxmax()        # n'a pas acheté depuis longtemps
+inactive = med.loc[remaining, "recency"].idxmax()  
 names[inactive] = "inactive"
 remaining.remove(inactive)
 
-new = med.loc[remaining, "tenure"].idxmin()              # client arrivé récemment
+new = med.loc[remaining, "tenure"].idxmin()       
 names[new] = "New customers"
 remaining.remove(new)
 
-# Les clusters restants sont classés selon l'argent dépensé
 loyal_order = med.loc[remaining, "monetary"].sort_values().index
 for label, c in zip(["Silver", "Gold", "Platinum"], loyal_order):
     names[c] = label
@@ -78,7 +74,6 @@ colors = {
     "Platinum": "#9b7fd1",
 }
 
-# ---------- 4. Graphique 1 : nombre de clients par groupe ----------
 counts = df["group"].value_counts().sort_values()
 fig, ax = plt.subplots(figsize=(9, 5))
 bars = ax.barh(counts.index, counts.values, color=[colors[g] for g in counts.index])
@@ -88,7 +83,6 @@ ax.set_xlabel("number of customers")
 plt.tight_layout()
 plt.show()
 
-# ---------- 5. Graphique 2 : récence médiane vs fréquence médiane ----------
 agg = df.groupby("group").agg(
     recency=("recency", "median"),
     frequency=("frequency", "median"),
@@ -108,9 +102,6 @@ ax.set_ylabel("Median Frequency")
 plt.tight_layout()
 plt.show()
 
-# ---------- 6. Graphique 3 : clusters dans l'espace standardisé ----------
-# Comme sur le sujet : axes linéaires en valeurs standardisées,
-# gros points par cluster et centroïdes en jaune.
 ix, iy = features.index("frequency"), features.index("monetary")
 cluster_colors = ["red", "blue", "green", "cyan", "magenta"]
 
@@ -121,7 +112,7 @@ for c in range(K):
                label=f"Cluster {c + 1} ({names[c]})")
 ax.scatter(km.cluster_centers_[:, ix], km.cluster_centers_[:, iy],
            s=300, color="yellow", label="Centroids")
-ax.set_xlim(-1, 5)       # zoom d'affichage uniquement, aucune donnée supprimée
+ax.set_xlim(-1, 5)      
 ax.set_ylim(-2, 5.5)
 ax.set_title("Clusters of customers")
 ax.set_xlabel("frequency (standardized)")
